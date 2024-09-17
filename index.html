@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Silly single-serving site for playing about with WebAudio in JavaScript and making something approximating music." />
+    <title>μTone</title>
+    <link rel="stylesheet" href="res/main.css">
+    <script src="res/tracks.js"></script>
+    <script src="res/main.js"></script>
+    <script src="res/conway.js" async></script>
+    <script src="res/draggable.js" async></script>
+    <link rel="stylesheet" href="res/main.css">
+</head>
+
+<body>
+
+    <div id="controls" class="card">
+        <table>
+            <tr>
+                <td>Steps</td>
+                <td><input id="stepSpinner" type="number" onchange="stepChange(parseInt(this.value))" min="1" /></td>
+            </tr>
+            <tr>
+                <td>Step duration</td>
+                <td><input id="stepDurationSpinner" type="number" value="0.5" step="0.01" min="0.01" onchange="stepDurationChange(parseFloat(this.value))" /></td>
+            </tr>
+        </table>
+
+        <div>
+            <div>
+                <button class="skeuButton" onclick="initAudioContext(); startAutoplay()">Start</button>
+                <button class="skeuButton" onclick="stopAutoplay()">Stop</button>
+                <button class="skeuButton" onclick="initAudioContext(); advanceStep()">Step</button>
+                <button class="skeuButton" onclick="highlightStep(-1)">&lt;&lt;</button>
+                <select id="waveformSelection" onchange="changeWaveform(this.value)">
+                    <option disabled="" selected="">Waveform</option>
+                    <option value="sine">Sine</option>
+                    <option value="square">Square</option>
+                    <option value="sawtooth">Sawtooth</option>
+                    <option value="triangle">Triangle</option>
+                </select>
+            </div>
+            <div>
+                <button class="skeuButton" onclick="clearNotesIfSure()">Clear</button>
+                <div id="trackSelection" style="display: inline-block"></div>
+                <button class="skeuButton" onclick="doLoad()">Load</button>
+                <button class="skeuButton" onclick="doExport()">Export</button>
+            </div>
+            <div>
+                <button class="skeuButton" onclick="insertColAtCurrentPos()">Insert column</button>
+                <button class="skeuButton" onclick="deleteColAtCurrentPos()">Delete column</button>
+                <button class="skeuButton" onclick="wideMode()">Wide mode</button>
+            </div>
+            <span class="card_hide_toggle" onclick="toggleFloatingControls()"></span>
+        </div>
+
+        <div id="noteDurationSwitcher" class="single" onclick="cycleNoteDuration()"></div>
+    </div>
+
+    <div id="gridContainer" class="card">
+        <table id="theGrid"></table>
+    </div>
+
+    <div id="postscript" class="card card_hidden">
+        <span class='card_hide_toggle' onclick='hideCard(this)'></span>
+        <p>This bit is experimental and likely to break everything</p>
+        <table>
+            <tr>
+                <td>Number of octaves</td>
+                <td><input id="octaveSpinner" type="number" value="2" step="1" min="2" onchange="octaveChange(parseFloat(this.value))" /></td>
+            </tr>
+            <tr>
+                <td>Start octave</td>
+                <td><input id="startOctaveSpinner" type="number" value="3" step="1" min="1" onchange="startOctaveChange(parseFloat(this.value))" /></td>
+            </tr>
+            <tr>
+                <td>Bar length</td>
+                <td><input id="barLengthSpinner" type="number" value="8" step="1" min="2" onchange="doBarShading(parseInt(this.value))"></input></td>
+            </tr>
+            <tr>
+                <td>Game of Life</td>
+                <td><button class="skeuButton" onclick="toggleConway(this)">Start</button></td>
+            </tr>
+            <tr>
+                <td>Game of Life interval (ms)</td>
+                <td><input type="number" value="500" step="1" min="1" onchange="conwayInterval = parseInt(this.value); restartConway()" /></td>
+            </tr>
+            <tr>
+                <td>Multiply all steps by 2</td>
+                <td>
+                    <button class="skeuButton" onclick="doubleSpace()">Insert spaces</button>
+                    <button class="skeuButton" onclick="doubleSpace(true)">Double notes</button>
+                </td>
+            </tr>
+            <tr>
+                <td>Attack</td>
+                <td><input type="number" value="1" step="0.01" min="0" max="1" onchange="setAttack(parseFloat(this.value))" /></td>
+            </tr>
+            <tr>
+                <td>Release</td>
+                <td><input type="number" value="0" step="0.01" min="0" max="1" onchange="setRelease(parseFloat(this.value))" /></td>
+            </tr>
+            <tr>
+                <td>Transpose</td>
+                <td>
+                    <input id="transposeAmountSpinner" type="number" value="1" step="1" min="0" max="19" style="width: 5em" />
+                    <button class="skeuButton" onclick="transposeScore(-1 * parseInt(document.getElementById('transposeAmountSpinner').value))" style="width: 3em">-</button>
+                    <button class="skeuButton" onclick="transposeScore(parseInt(document.getElementById('transposeAmountSpinner').value))" style="width: 3em">+</button>
+                </td>
+            </tr>
+            <tr>
+                <td>(╯°□°)╯︵ ┻━┻</td>
+                <td>
+                    <button class="skeuButton" onclick="flipScore()">Flip</button>
+                </td>
+            </tr>
+            <tr>
+                <td>Mark section</td>
+                <td>
+                    <button class="skeuButton" onclick="enableMarkerMode()" id="markerModeOnBtn">On</button>
+                    <button class="skeuButton activeBtn" onclick="disableMarkerMode()" id="markerModeOffBtn">Off</button>
+                </td>
+            </tr>
+            <tr>
+                <td>Clipboard</td>
+                <td>
+                    <button class="skeuButton" onclick="copyMarkedCells()">Copy</button>
+                    <button class="skeuButton" onclick="pasteMarkedCells()">Paste after current step</button>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <table id="shortcutsTable">
+            <tr>
+                <td>←</td>
+                <td>Step left</td>
+            </tr>
+            <tr>
+                <td>→</td>
+                <td>Step right</td>
+            </tr>
+            <tr>
+                <td>Space</td>
+                <td>Start/Stop playback</td>
+            </tr>
+            <tr>
+                <td>Tab ↹</td>
+                <td>Cycle note duration</td>
+            </tr>
+            <tr>
+                <td>m</td>
+                <td>Toggle section marking</td>
+            </tr>
+            <tr>
+                <td>n</td>
+                <td>Add step to end</td>
+            </tr>
+            <tr>
+                <td>c</td>
+                <td>Copy</td>
+            </tr>
+            <tr>
+                <td>v</td>
+                <td>Paste</td>
+            </tr>
+            <tr>
+                <td>w</td>
+                <td>Toggle wide mode</td>
+            </tr>
+            <tr>
+                <td>i</td>
+                <td>Insert column at current position</td>
+            </tr>
+            <tr>
+                <td>&lt;</td>
+                <td>Jump to start</td>
+            </tr>
+            <tr>
+                <td>←Bksp</td>
+                <td>Delete current column</td>
+            </tr>
+            <tr>
+                <td>d</td>
+                <td>Toggle dark mode</td>
+            </tr>
+        </table>
+    </div>
+
+    <div id="snapshots" class="card card_hidden">
+        <span class='card_hide_toggle' onclick='hideCard(this)'></span>
+        <p>Snapshot history</p>
+    </div>
+
+    <canvas id="faviconCanvas" style="display: none;"></canvas>
+
+</body>
+<script>
+    'use strict'
+
+    function init() {
+        stepChange(stepCount);
+        trackSelectorGenerator();
+        initFancyTrackSelection();
+        read_url_params_and_apply();
+        setFavicon(defaultFavicon, defaultFaviconAlpha)
+
+        if (doWarn) {
+            window.onbeforeunload = function () { return "Your work will be lost."; };
+        }
+
+        window.addEventListener("keydown", keyHandler)
+    }
+
+    // globals
+    var numberOfOctaves = 2
+    var startOctave = 3
+    var stepCount = 16
+    var currentStep = -1
+    var stepDuration = 0.5
+    var chromaticScale = ["C", "C½", "C♯", "D", "D½", "D♯", "E", "E½", "F", "F½", "F♯", "G", "G½", "G♯", "A", "A½", "A♯", "B", "B½"]
+    var audioCtx
+    var mainGainNode
+    var volume = 0.15
+    var autoStepIntervalIdArray = []
+    var waveform = "sine"
+    var tempState
+    var isWideModeEnabled = 0
+    var theGrid = document.getElementById("theGrid")
+    var doWarn = true
+    var attackTime
+    var releaseTime
+    var notePickerDuration = "single"
+    var refreshIntervalId = undefined;
+    var conwayInterval = 500
+    var controlDiv = document.getElementById("controls")
+    var markerArray = []
+    var copiedNotesObj
+    var snapshotArray = []
+    var snapshotFrequencyMins = 1
+    var snapshotArrayMax = 5
+    var snapshotIntervalId = setInterval(takeSnapshot, snapshotFrequencyMins * 60 * 1000)
+    var inhibitDarkModeToggle
+    const canvas = document.getElementById('faviconCanvas')
+    var ctx = canvas.getContext("2d");
+    const defaultFavicon = "http://ashe.org.uk/grid.html?pattern=0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011100000001001011111000000000001111100000000000111110000001001001110000000000000000000000000000000000000000000000000000&width=16&height=16&primary=000000&secondary=69abac"
+    const defaultFaviconAlpha = "http://ashe.org.uk/grid.html?pattern=0000000000000000000000000000000000000000000111000000000011100000000001110000000001111111111111100111111111111110011000001111111001111111111111100111111111111110011111111111111001111111111111100111111111111110011111111111111001111111111111100000000000000000&width=16&height=16"
+
+    // init
+    init();
+</script>
+
+</html>
