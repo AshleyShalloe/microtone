@@ -1,5 +1,24 @@
 "use strict";
 
+function toggleNoteNameColour(inputElm) {
+    if (inputElm) {
+        var noteName = inputElm.innerText;
+        if (noteNamesHighlightedSet.has(noteName)) {
+            noteNamesHighlightedSet.delete(noteName);
+        } else {
+            noteNamesHighlightedSet.add(noteName);
+        }
+    }
+
+    [...document.getElementsByClassName("noteNameHighlight")].forEach((x) => {
+        x.classList.remove("noteNameHighlight");
+    });
+
+    [...noteNamesHighlightedSet].forEach((x) => {
+        document.querySelector(`[data-note=${x}].step_-1`).classList.add("noteNameHighlight");
+    });
+}
+
 function stepChange(steps, noReload) {
     // var theGrid = document.getElementById("theGrid")
     var stepSpinner = document.getElementById("stepSpinner");
@@ -20,7 +39,9 @@ function stepChange(steps, noReload) {
             if (!j) {
                 var note = chromaticScale[19 - ((i % 19) + 1)];
                 var octave = startOctave + numberOfOctaves - (1 + Math.floor(i / 19));
-                cellHTML = `<td class='step_${j - 1}' data-note="${note}${octave}">${note}${octave}</td>`;
+                cellHTML = `<td class='step_${
+                    j - 1
+                }' onclick="toggleNoteNameColour(this)" data-note="${note}${octave}">${note}${octave}</td>`;
             } else {
                 cellHTML = `<td class='step_${j - 1}'></td>`;
             }
@@ -31,6 +52,7 @@ function stepChange(steps, noReload) {
     }
     newGridHTML.push("</tbody></table>");
     theGrid.innerHTML = newGridHTML.join("\n");
+    toggleNoteNameColour();
     stepSpinner.value = steps;
 
     cycleNoteDuration(true);
@@ -922,7 +944,7 @@ function transposeScore(semitones) {
 function noteToMidiNumber(inputNote) {
     var octave = parseInt(inputNote.slice(inputNote.length - 1));
     var note = inputNote.slice(0, 1);
-    var isSharp = +inputNote.replace("#", "♯").includes("♯")
+    var isSharp = +inputNote.replace("#", "♯").includes("♯");
 
     return 19 * octave + chromaticScale.indexOf(note) + 3 + 9 + isSharp;
 }
@@ -1327,9 +1349,9 @@ function gridUrlToDataUrl(patternUrl, alphaUrl) {
     // if not given, set alpha to 255 for all pixels
     var alphaArray = paramsAlpha
         ? paramsAlpha
-                .get("pattern")
-                .split("")
-                .map((x) => (parseInt(x) ? 255 : 0))
+              .get("pattern")
+              .split("")
+              .map((x) => (parseInt(x) ? 255 : 0))
         : Array(width * height).fill(255);
 
     // write pixels to object
@@ -1378,7 +1400,7 @@ function initFancyTrackSelection() {
             noteCount += data["doublenotes"].length;
         }
         if (Object.keys(data).includes("halfnotes")) {
-            noteCount += [...data["halfnotes"]].map(x => x[2] == "11" ? 2 : 1).reduce((a,b) => a+b, 0)
+            noteCount += [...data["halfnotes"]].map((x) => (x[2] == "11" ? 2 : 1)).reduce((a, b) => a + b, 0);
         }
 
         data.metadata.noteCount = noteCount;
