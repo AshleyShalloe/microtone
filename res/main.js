@@ -309,7 +309,7 @@ function getFrequencyFromNoteName(noteName) {
         `;
     var note = noteName.slice(0, noteName.length - 1).replace("#", "♯");
     var octave = parseInt(noteName.slice(noteName.length - 1));
-    var noteIdx = chromaticScale.indexOf(note) + 3;
+    var noteIdx = chromaticScale.indexOf(note) + 5;
 
     var noteValueRelativeToA4 = noteIdx + 19 * (octave - 4);
     var noteFrequency = 2 ** (noteValueRelativeToA4 / 19) * 440;
