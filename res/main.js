@@ -39,9 +39,8 @@ function stepChange(steps, noReload) {
             if (!j) {
                 var note = chromaticScale[19 - ((i % 19) + 1)];
                 var octave = startOctave + numberOfOctaves - (1 + Math.floor(i / 19));
-                cellHTML = `<td class='step_${
-                    j - 1
-                }' onclick="toggleNoteNameColour(this)" data-note="${note}${octave}">${note}${octave}</td>`;
+                cellHTML = `<td class='step_${j - 1
+                    }' onclick="toggleNoteNameColour(this)" data-note="${note}${octave}">${note}${octave}</td>`;
             } else {
                 cellHTML = `<td class='step_${j - 1}'></td>`;
             }
@@ -235,10 +234,10 @@ function getCurrentStepActiveCellHalfNoteArray() {
         x.classList.contains("activeCellHalf01")
             ? "01"
             : x.classList.contains("activeCellHalf10")
-            ? "10"
-            : x.classList.contains("activeCellHalf11")
-            ? "11"
-            : undefined,
+                ? "10"
+                : x.classList.contains("activeCellHalf11")
+                    ? "11"
+                    : undefined,
     ]);
     return noteArray ? noteArray : [];
 }
@@ -382,10 +381,10 @@ function getTheScore(asString) {
         x.classList.contains("activeCellHalf01")
             ? "01"
             : x.classList.contains("activeCellHalf10")
-            ? "10"
-            : x.classList.contains("activeCellHalf11")
-            ? "11"
-            : undefined,
+                ? "10"
+                : x.classList.contains("activeCellHalf11")
+                    ? "11"
+                    : undefined,
     ]);
 
     theScore["steps"] = stepCount;
@@ -1349,9 +1348,9 @@ function gridUrlToDataUrl(patternUrl, alphaUrl) {
     // if not given, set alpha to 255 for all pixels
     var alphaArray = paramsAlpha
         ? paramsAlpha
-              .get("pattern")
-              .split("")
-              .map((x) => (parseInt(x) ? 255 : 0))
+            .get("pattern")
+            .split("")
+            .map((x) => (parseInt(x) ? 255 : 0))
         : Array(width * height).fill(255);
 
     // write pixels to object
@@ -1388,6 +1387,11 @@ function initFancyTrackSelection() {
     // add calculated metadata fields
     for (var t in tracks) {
         var data = tracks[t];
+        var isMicrotonal = false;
+
+        if (data["notes"].map(x => x[0]).some(x => x.includes("½"))) {
+            isMicrotonal = true;
+        }
 
         // init metadata if needs be
         if (!Object.keys(data).includes("metadata")) {
@@ -1398,12 +1402,19 @@ function initFancyTrackSelection() {
         var noteCount = data["notes"].length;
         if (Object.keys(data).includes("doublenotes")) {
             noteCount += data["doublenotes"].length;
+            if (data["doublenotes"].map(x => x[0]).some(x => x.includes("½"))) {
+                isMicrotonal = true;
+            }
         }
         if (Object.keys(data).includes("halfnotes")) {
             noteCount += [...data["halfnotes"]].map((x) => (x[2] == "11" ? 2 : 1)).reduce((a, b) => a + b, 0);
+            if (data["halfnotes"].map(x => x[0]).some(x => x.includes("½"))) {
+                isMicrotonal = true;
+            }
         }
 
         data.metadata.noteCount = noteCount;
+        data.metadata.microtonal = isMicrotonal
 
         // bpm
         var bpm = Math.round(60 / data["duration"]);
@@ -1446,8 +1457,8 @@ function initFancyTrackSelection() {
             Object.keys(data).includes("favicon") && Object.keys(data).includes("faviconAlpha")
                 ? data["faviconAlpha"]
                 : Object.keys(data).includes("favicon")
-                ? undefined
-                : defaultFaviconAlpha;
+                    ? undefined
+                    : defaultFaviconAlpha;
         var faviconDataUrl = gridUrlToDataUrl(patternUrl, alphaUrl);
         var faviconElm = document.createElement("img");
         faviconElm.src = faviconDataUrl;
@@ -1469,6 +1480,8 @@ function initFancyTrackSelection() {
             }
         }
 
+        tempArray.push(isMicrotonal ? "Microtonal" : "")
+
         fancyData.push(tempArray);
     }
 
@@ -1487,6 +1500,7 @@ function initFancyTrackSelection() {
             .filter((x) => x[0].toString().length)
             .map((x) => x[1])
             .join("");
+
         trackCardElm.dataset["trackName"] = fancyData[i][1];
         trackCardElm.onclick = function () {
             playTrackByName(this.dataset.trackName);
